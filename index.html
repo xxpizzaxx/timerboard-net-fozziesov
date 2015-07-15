@@ -65,7 +65,8 @@
             <td class="system"><a href="http://evemaps.dotlan.net/search?q={{ system }}">{{ system }}</a></td>
             <td class="region">{{ region }}</td>
             <td class="owner"><a href="http://evemaps.dotlan.net/search?q={{ owner }}">{{ owner }}</a></td>
-            <td class="time" title="{{time}}">{{ calendartime }}</td>
+            <td class="time" style="display: none;">{{ time }}</td>
+            <td class="calendartime" title="{{time}}">{{ calendartime }}</td>
             <td class="remaining" style="width: 150px;"><span id="remaining.{{ id }}" style="font-family: monospace;"></span></td>
         </tr>
     </script>
