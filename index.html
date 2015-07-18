@@ -1,26 +1,29 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <link rel="icon" type="image/png" href="favicon.png">
     <link rel="stylesheet" type="text/css" href="css/bootstrap.min.css" />
-    <script src="//www.google.com/jsapi"></script>
-    <script>google.load("jquery", "1.3")</script>
+    <script src="js/jquery.min.js"></script>
     <script src="js/bootstrap.min.js"></script>
     <link href="css/font-awesome.min.css" rel="stylesheet">
     <script src="js/mustache.js"></script>
     <script src="js/jquery.tinysort.min.js"></script>
+    <script src="js/jquery.clearsearch.js"></script>
+    <script src="js/jquery.knob.js"></script>
     <script src="js/moment.min.js"></script>
     <script src="js/system2region.json.js"></script>
+    <script src='js/nprogress.js'></script>
+    <link rel='stylesheet' href='css/nprogress.css'/>
     <title>timerboard.net</title>
-
 </head>
 <body>
 <nav class="navbar navbar-default">
     <div class="container">
         <div class="navbar-header">
             <button class="navbar-toggle" data-target=".navbar-collapse" data-toggle="collapse" type="button" data-target=".navbar-ex1-collapse">
-					<span class="sr-only">
-						Toggle navigation
-					</span>
+                    <span class="sr-only">
+                        Toggle navigation
+                    </span>
                 <span class="icon-bar"></span>
                 <span class="icon-bar"></span>
                 <span class="icon-bar"></span>
@@ -35,23 +38,83 @@
 <div class="container">
 
     <style type="text/css">
-        label {	font-size: large;
+        label {    font-size: large;
             text-align: right
         }
-        input {width: 70%;
+        input {width: 100%;
             float: right;
+        }
+	.circlebox {
+		width: 100px;
+		float: left;
+		margin-left: 10px;
+		margin-right: 10px;
+	}
+	.circlebox-small {
+		width: 80px;
+		float: left;
+		margin-left: 10px;
+		margin-right: 10px;
+                padding-top: 20px;
+	}
+	p.label {
+		text-transform: uppercase;
+		font: small;
+		text-align: center;
+		width: 100px;
+                padding: 0;
+	}
+        .circleboxcontainer {
+            width: 440px ;
+            margin-left: auto ;
+            margin-right: auto ;
         }
     </style>
     <script src="js/countdown.js" type="text/javascript"></script>
+
+    <div style="height:110px;">
+        <div class="circleboxcontainer">
+	    <div class="circlebox-small">
+                <input id="uncontested" type="text" value="0" class="dial" data-readOnly="true" data-thickness="0.1" data-width="80" data-height="80" data-fgColor="#8B4513">
+		<center>
+	                <p class="label" style="color: #8B4513">Uncontested</p>
+		</center>
+            </div>
+            <div class="circlebox">
+                <input id="active" type="text" value="0" class="dial" data-readOnly="true" data-thickness="0.1" data-width="100" data-height="100" data-fgColor="#ff1a1a">
+		<center>
+	                <p class="label" style="color: #ff1a1a">Active</p>
+		</center>
+            </div>
+            <div class="circlebox">
+                <input id="upcoming" type="text" value="0" class="dial" data-readOnly="true" data-thickness="0.1" data-width="100" data-height="100">
+		<center>
+	                <p class="label" style="color: #87CEEB">Upcoming</p>
+		</center>
+            </div>
+            <div class="circlebox-small">
+                <input id="start" type="text" value="0" class="dial" data-readOnly="true" data-thickness="0.1" data-width="80" data-height="80" data-fgColor="#FF8C00">
+		<center>
+	                <p class="label" style="color: #FF8C00">Start in <4hrs</p>
+		</center>
+            </div>
+        </div>
+    </div>
+
+    <div>
+        <h3><input id="filter" class="clearable" placeholder="Filter by typing here, separate multiple terms by commas" autofocus /></h3>
+    </div>
+
     <table class="table table-hover" id="timers">
         <thead>
         <tr>
-            <th><a href="#" onClick='sort("type");'>Type<span style="float:right;" id="type"></span></a></th>
-            <th><a href="#" onClick='sort("system");'>System<span style="float:right;" id="system"></span></a></th>
-            <th><a href="#" onClick='sort("region");'>Region<span style="float:right;" id="region"></span></a></th>
-            <th><a href="#" onClick='sort("owner");'>Owner<span style="float:right;" id="owner"></span></a></th>
-            <th><a href="#" onClick='sort("time");'>Time<span style="float:right;" id="time"></span></a></th>
-            <th><a href="#" onClick='sort("time");'>Remaining<span style="float:right;" id="remaining"></span></a></th>
+            <th><a href="#" onClick='sort("type");'>Type<span style="float:none;" id="type"></span></a></th>
+            <th><a href="#" onClick='sort("system");'>System<span style="float:none;" id="system"></span></a></th>
+            <th><a href="#" onClick='sort("region");'>Region<span style="float:none;" id="region"></span></a></th>
+            <th><a href="#" onClick='sort("owner");'>Owner<span style="float:none;" id="owner"></span></a></th>
+            <th><a href="#" onClick='sort("time");'>Time<span style="float:none;" id="time"></span></a></th>
+            <th><a href="#" onClick='sort("time");'>Remaining<span style="float:none;" id="remaining"></span></a></th>
+            <th><a href="#" onClick='sort("defended");'>Defender Score<span style="float:none;" id="defended"></span></a></th>
         </tr>
         </thead>
         <tbody>
@@ -60,25 +123,35 @@
 
 
     <script type="text/template" id="timer_template">
-        <tr id="{{ id }}" class="timer_row">
+        <tr id="{{ id }}" class="timer_row" data-tags="{{ tags }}">
             <td class="type">{{ type }}</td>
             <td class="system"><a href="http://evemaps.dotlan.net/search?q={{ system }}">{{ system }}</a></td>
             <td class="region">{{ region }}</td>
             <td class="owner"><a href="http://evemaps.dotlan.net/search?q={{ owner }}">{{ owner }}</a></td>
             <td class="time" style="display: none;">{{ time }}</td>
-            <td class="calendartime" title="{{time}}">{{ calendartime }}</td>
+	    <td class="calendartime" title="{{time}}">{{ calendartime }}</td>
             <td class="remaining" style="width: 150px;"><span id="remaining.{{ id }}" style="font-family: monospace;"></span></td>
+            <td class="defended">{{ defended }}</td>
         </tr>
     </script>
 
     <script>
+        // set up UI
+        $(".dial").knob();
+        $(".dial").click(function () {append_filter(this.id)});
+
+        $('.clearable').clearSearch({ callback: function() {
+            $('#filter').trigger('input');
+            $("#filter").focus();
+        }});
+
+        // set up timer data
         timers = {};
         var sortkey = "time";
         var sort_asc = false;
 
         function do_sort() {
             $(".timer_row").tsort("."+sortkey, {order: sort_asc ? "asc" : "desc"});
-            console.log(sortkey+" "+sort_asc);
         }
 
         var ICON_ASC = '<i class="fa fa-sort-amount-asc"/></i>';
@@ -94,6 +167,17 @@
                 $("#"+sortkey)[0].innerHTML = sort_asc ? ICON_ASC : ICON_DESC;
             }
             do_sort();
+        }
+
+        function append_filter(term) {
+            if ($("#filter").val().trim() === "") {
+                $("#filter").val(term);
+            } else {
+                var text = $("#filter").val() + "," + term;
+                $("#filter").val(text);
+            }
+            $('#filter').trigger('input');
+            $("#filter").focus();
         }
 
         function add_timer(i, timer) {
@@ -126,39 +210,189 @@
             4: "Freeport"
         };
 
+    function pad(n, width, z) {
+        z = z || '0';
+        n = n + '';
+        return n.length >= width ? n : new Array(width - n.length + 1).join(z) + n;
+    };
+
+        NProgress.start(); //start the loading bar on first use
+
         // new stuff
         websocket = new WebSocket("wss://api.pizza.moe/stream/sovereignty/campaigns/");
         websocket.onopen = function(evt) {  };
         websocket.onclose = function(evt) {  };
         websocket.onmessage = function(evt) {
+            var active = 0;
+            NProgress.start();
             var event = JSON.parse(evt["data"]);
+            var idsrecvd = [];
+            // add and update entries
             $.each(event["items"], function(i, e) {
                 var timer = {
                     type: typeLookup[e["eventType"]],
                     system: e["sourceSolarsystem"]["name"],
                     region: system2region[e["sourceSolarsystem"]["name"]],
                     time: e["startTime"],
-                    realtime: moment(e["startTime"]),
-                    calendartime: moment(e["startTime"]).calendar(),
+                    realtime: moment.utc(e["startTime"]),
+		    calendartime: moment.utc(e["startTime"]).calendar(),
                     owner: "None",
-                    id: e["sourceSolarsystem"]["name"]+e["startTime"]
+                    id: e["sourceSolarsystem"]["name"]+e["startTime"],
+                    defended: "N/A",
+                    tags: []
                 };
+                idsrecvd.push(timer["id"]);
                 try {
                     timer["owner"] = e["defender"]["defender"]["name"];
+                    timer["defended"] = pad(Math.round(e["defender"]["score"] * 100), 2) + "%";
                 }
                 catch (err) {
 
                 }
-                console.log(timer["id"]);
+                if (timer["realtime"] < new Date()) {
+                    active = active + 1;
+                    timer.tags.push("active");
+                } else {
+                    timer.tags.push("upcoming");
+                }
+                if ((timer["realtime"] > new Date())&& (timer["realtime"] < new Date(Date.now()+14400000))) {
+                   timer.tags.push("start");
+                }
+                if ((timer.tags.indexOf("upcoming")) && (timer["defended"] === "50%")) {
+                   timer.tags.push("uncontested");
+                }
                 if (!(timer["id"] in timers)) {
                     timer_to_row(0, timer);
                     add_timer(0, timer);
-                    do_sort();
+                } else {
+                    // update it's defense data and tags
+                    var escapedId = timer["id"].replace(/:/g, "\\:");
+                    var selector = "#"+escapedId+" > .defended";
+                    $("#"+escapedId+" > .defended").html("<td class=\"defended\">"+timer["defended"]+"</td>");
+                    $("#"+escapedId).data("tags", timer.tags.join(","));
                 };
             });
+            NProgress.inc();
+            // remove old entries
+            Object.keys(timers).forEach(function(i) {
+                if($.inArray(i, idsrecvd) == -1) {
+                    console.log("expiring timer "+i);
+                    var escapedId = i.replace(/:/g, "\\:");
+                    window.clearInterval(timers[i]);
+                    $("#"+escapedId).remove();
+                    delete timers[i];
+                }
+            });
+            NProgress.inc();
+            do_sort();
+            NProgress.inc();
+            doFilter();
+            document.getElementById("counter").innerHTML = Object.keys(timers).length +" timers currently running."
+            NProgress.done();
         };
         websocket.onerror = function(evt) {  };
 
+        var storedFilter = "";
+
+        function doFilter() {
+            $("tbody tr").hide();
+            // filtering
+            var terms = storedFilter.split(",").map(function (i) {return i.trim()});
+            var tohide = $("tbody tr").filter(function() {var target = $(this).text().toLowerCase() + $(this).data().tags; return terms.every(function(term) {return target.search(term) == -1})});
+            var toshow = $("tbody tr").filter(function() {var target = $(this).text().toLowerCase() + $(this).data().tags; return terms.every(function(term) {return target.search(term) != -1})});
+            toshow.show();
+            // category counters
+            var total = toshow.length;
+            var active = toshow.filter(function() {return $(this).data().tags.split(",").indexOf("active") > -1}).length
+            var upcoming = toshow.filter(function() {return $(this).data().tags.split(",").indexOf("upcoming") > -1}).length
+            var start = toshow.filter(function() {return $(this).data().tags.split(",").indexOf("start") > -1}).length
+            var uncontested = toshow.filter(function() {return $(this).data().tags.split(",").indexOf("uncontested") > -1}).length
+
+            // set dials
+            $('#active').trigger(
+                'configure',
+                {
+                    "min":0,
+                    "max":total,
+                }
+            );
+            $('#upcoming').trigger(
+                'configure',
+                {
+                    "min":0,
+                    "max":total,
+                }
+            );
+            $('#start').trigger(
+                'configure',
+                {
+                    "min":0,
+                    "max":total,
+                }
+            );
+            $('#uncontested').trigger(
+                'configure',
+                {
+                    "min":0,
+                    "max":total,
+                }
+            );
+
+            if (total > 1000) {
+                    $(".dial").stop();
+		    $({animatedVal: 0}).animate({animatedVal: active}, {
+			duration: 200,
+			easing: "swing",
+			step: function() {
+			    $("#active").val(Math.round(this.animatedVal)).trigger("change");
+			}
+		    });
+		    $({animatedVal: 0}).animate({animatedVal: upcoming}, {
+			duration: 200,
+			easing: "swing",
+			step: function() {
+			    $("#upcoming").val(Math.round(this.animatedVal)).trigger("change");
+			}
+		    });
+
+		    $({animatedVal: 0}).animate({animatedVal: start}, {
+			duration: 200,
+			easing: "swing",
+			step: function() {
+			    $("#start").val(Math.round(this.animatedVal)).trigger("change");
+			}
+		    });
+
+
+		    $({animatedVal: 0}).animate({animatedVal: uncontested}, {
+			duration: 200,
+			easing: "swing",
+			step: function() {
+			    $("#uncontested").val(Math.round(this.animatedVal)).trigger("change");
+			}
+		    });
+            } else {
+                $(".dial").stop();
+                $("#active").val(active).trigger("change");
+                $("#upcoming").val(upcoming).trigger("change");
+                $("#start").val(start).trigger("change");
+                $("#uncontested").val(uncontested).trigger("change");
+            }
+        }
+
+        // filtering
+        $('#filter').bind('input', function() {
+            var filter = $(this).val().toLowerCase();
+            storedFilter = filter;
+            doFilter();
+        });
+
+        if (window.location.pathname.length>1) {
+                var initialFilter = window.location.pathname.slice(1);
+                $("#filter").val(initialFilter);
+                storedFilter = initialFilter.toLowerCase();
+                doFilter();
+        };
 
         sort("time");
     </script>
@@ -167,11 +401,18 @@
         <hr />
         <footer>
             <div class="container">
+        <p class=".small text-center text-muted" id="counter">0 timers currently running.</p>
                 <p class=".small text-center text-muted">This site is a deployment of <a href="https://github.com/xxpizzaxx/timerboard-net-fozziesov">timerboard-net-fozziesov</a>, fed by data from <a href="https://github.com/xxpizzaxx/pizza-sov-relay">pizza-sov-relay</a> which are both available under the <a href="http://opensource.org/licenses/MIT">MIT License</a>.</p>
             </div>
         </footer>
-    </body>
     <script>
-        $('#dtf').tooltip()
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-55713418-2', 'auto');
+      ga('send', 'pageview');
     </script>
+    </body>
 </html>
