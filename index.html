@@ -1,19 +1,29 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <link rel="icon" type="image/png" href="favicon.png">
-    <link rel="stylesheet" type="text/css" href="css/bootstrap.min.css" />
-    <script src="js/jquery.min.js"></script>
-    <script src="js/bootstrap.min.js"></script>
-    <link href="css/font-awesome.min.css" rel="stylesheet">
-    <script src="js/mustache.js"></script>
-    <script src="js/jquery.tinysort.min.js"></script>
-    <script src="js/jquery.clearsearch.js"></script>
-    <script src="js/jquery.knob.js"></script>
-    <script src="js/moment.min.js"></script>
-    <script src="js/system2region.json.js"></script>
-    <script src='js/nprogress.js'></script>
-    <link rel='stylesheet' href='css/nprogress.css'/>
+    <meta name="keywords" content="timers, timerboard, timer board, eve online, eve, pvp, nullsec, sov, sovereignty, intel"/>
+    <meta name="description" content="timerboard.net shows a searchable view of all sovereignty-related event timers in EVE Online."/>
+    <meta name="author" content="Lucia Denniard"/>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <link rel="icon" type="image/png" href="./favicon.png">
+    <link rel="shortcut icon" type="image/png" href="./favicon.png">
+    <link rel="stylesheet" type="text/css" href="./css/bootstrap.min.css" />
+    <script src="./js/jquery.min.js"></script>
+    <script src="./js/bootstrap.min.js"></script>
+    <link href="./css/font-awesome.min.css" rel="stylesheet">
+    <script src="./js/mustache.js"></script>
+    <script src="./js/jquery.tinysort.min.js"></script>
+    <script src="./js/jquery.knob.js"></script>
+    <script src="./js/moment.min.js"></script>
+    <script src="./js/system2region.json.js"></script>
+    <script src='./js/nprogress.js'></script>
+    <script src='./js/jsonpatch.min.js'></script>
+    <script src='./js/reconnecting-websocket.min.js'></script>
+    <script src='//cdnjs.cloudflare.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js'></script>
+    <link rel="stylesheet" type="text/css" href="//ajax.googleapis.com/ajax/libs/jqueryui/1/themes/flick/jquery-ui.css">
+    <script src="./js/tag-it.min.js" type="text/javascript" charset="utf-8"></script>
+    <link href="./css/jquery.tagit.css" rel="stylesheet" type="text/css">
+    <link rel='stylesheet' href='./css/nprogress.css'/>
     <title>timerboard.net</title>
 </head>
 <body>
@@ -31,11 +41,20 @@
             <a class="navbar-brand" href="/"><i class="fa fa-calendar"></i> timerboard.net
             </a></div>
         <nav class="collapse navbar-collapse navbar-ex1-collapse" role="navigtion">
+            <ul class="nav navbar-nav">
+        		<!--
+                    <li><a href="/WorldWarBee">#WorldWarBee</a></li>
+                -->
+            </ul>
         </nav>
     </div>
     </div>
 </nav>
-<div class="container">
+<div class="container" id="main">
+
+	<div class="container" id="alerts">
+
+	</div>
 
     <style type="text/css">
         label {    font-size: large;
@@ -69,6 +88,17 @@
             margin-left: auto ;
             margin-right: auto ;
         }
+	ul.tagit {
+		float: left;
+	}
+    .tablehover>tbody>tr>td.success, .table-hover>tbody>tr>th.success, .table-hover>tbody>tr.success>td {
+            background-color: rgba(185, 209, 191, 0.72);
+            border-color: #6bb85c;
+    }
+    .table-hover>tbody>tr>td.warning, .table-hover>tbody>tr>th.warning, .table-hover>tbody>tr.warning>td {
+            background-color: rgba(199, 184, 254, 0.44);
+            border-color: #9e42f0;
+    }
     </style>
     <script src="js/countdown.js" type="text/javascript"></script>
 
@@ -102,7 +132,11 @@
     </div>
 
     <div>
-        <h3><input id="filter" class="clearable" placeholder="Filter by typing here, separate multiple terms by commas" autofocus /></h3>
+        <h3><input id="filter" placeholder="Filter by typing here, separate multiple terms by commas" autofocus style="position:absolute;"/>
+	<span id="externallink" style="float:right; margin-top: 15px;">
+		<a title="External link to this filter" href="#"><i class="fa fa-link"></i></a>
+	</span>
+	</h3>
     </div>
 
     <table class="table table-hover" id="timers">
@@ -128,27 +162,66 @@
             <td class="system"><a href="http://evemaps.dotlan.net/search?q={{ system }}">{{ system }}</a></td>
             <td class="region">{{ region }}</td>
             <td class="owner"><a href="http://evemaps.dotlan.net/search?q={{ owner }}">{{ owner }}</a></td>
-            <td class="time" style="display: none;">{{ time }}</td>
-	    <td class="calendartime" title="{{time}}">{{ calendartime }}</td>
+            <td class="time">{{ time }}</td>
             <td class="remaining" style="width: 150px;"><span id="remaining.{{ id }}" style="font-family: monospace;"></span></td>
             <td class="defended">{{ defended }}</td>
         </tr>
     </script>
 
+	<script type="text/template" id="error_template">
+
+	<div class="alert alert-danger">
+		<a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+		{{ message }}
+	</div>
+	</script>
+
     <script>
         // set up UI
+        $("#externallink a").hide();
         $(".dial").knob();
-        $(".dial").click(function () {append_filter(this.id)});
+        $(".dial").click(function () {
+                if (storedFilter.indexOf(this.id) == -1) {
+			$("#filter").tagit("createTag", this.id);
+			$(".tagit input").focus();
+                } else {
+			$("#filter").tagit("removeTagByLabel", this.id);
+			$(".tagit input").focus();
+                }
+	});
 
-        $('.clearable').clearSearch({ callback: function() {
-            $('#filter').trigger('input');
-            $("#filter").focus();
-        }});
+        var searchtags = ["uncontested", "active", "upcoming", "start"];
+        var imperium = ["The Initiative.", "Goonswarm Federation", "The Bastion", "Get Off My Lawn", "RAZOR Alliance", "The Initiative.", "SpaceMonkey's Alliance", "Tactical Narcotics Team", "Executive Outcomes"];
+
+        function addsearchtag(t) {
+            if (searchtags.indexOf(t) == -1) {
+                searchtags.push(t);
+            }
+        }
+
+        var storedFilter = [];
+
+        $('#filter').tagit({
+                availableTags: searchtags,
+                singleField: true,
+                singleFieldNode: $('#filter'),
+                afterTagAdded: function(event, ui) {
+                    storedFilter = $("#filter").tagit("assignedTags");
+                    doFilter();
+                },
+                afterTagRemoved: function(event, ui) {
+                    storedFilter = $("#filter").tagit("assignedTags");
+                    doFilter();
+                },
+                allowSpaces: true,
+                caseSensitive: false
+            });
 
         // set up timer data
         timers = {};
         var sortkey = "time";
         var sort_asc = false;
+
 
         function do_sort() {
             $(".timer_row").tsort("."+sortkey, {order: sort_asc ? "asc" : "desc"});
@@ -167,17 +240,6 @@
                 $("#"+sortkey)[0].innerHTML = sort_asc ? ICON_ASC : ICON_DESC;
             }
             do_sort();
-        }
-
-        function append_filter(term) {
-            if ($("#filter").val().trim() === "") {
-                $("#filter").val(term);
-            } else {
-                var text = $("#filter").val() + "," + term;
-                $("#filter").val(text);
-            }
-            $('#filter').trigger('input');
-            $("#filter").focus();
         }
 
         function add_timer(i, timer) {
@@ -210,6 +272,12 @@
             4: "Freeport"
         };
 
+        $.each(Object.keys(typeLookup), function(i,k) {addsearchtag(typeLookup[k])});
+        $.each(Object.keys(system2region), function(i,k) {addsearchtag(system2region[k])});
+        addsearchtag("WorldWarBee");
+
+
+
     function pad(n, width, z) {
         z = z || '0';
         n = n + '';
@@ -218,24 +286,42 @@
 
         NProgress.start(); //start the loading bar on first use
 
+        var timerBuffer = {};
+
         // new stuff
-        websocket = new WebSocket("wss://api.pizza.moe/stream/sovereignty/campaigns/");
+        websocket = new ReconnectingWebSocket("wss://api.pizza.moe/diffstream/sovereignty/campaigns/");
         websocket.onopen = function(evt) {  };
         websocket.onclose = function(evt) {  };
         websocket.onmessage = function(evt) {
             var active = 0;
             NProgress.start();
             var event = JSON.parse(evt["data"]);
+            if (event.hasOwnProperty('status')) {
+                if ($("#alerts").is(":empty")) {
+                    $("#alerts").append(Mustache.to_html($("#error_template").html(), {"message": "Unable to pull new data from CREST, displaying cached data. This message will disappear if CREST becomes available again."}))
+                }
+            } else {
+                $("#alerts").empty();
+            }
+            // load our data
+            if ("initial" in event) {
+                console.log("initial mode");
+                timerBuffer = event["initial"];
+            }
+            if ("diff" in event) {
+                console.log("diff mode");
+                console.log(event["diff"]);
+                timerBuffer = jsonpatch.apply_patch(timerBuffer, event["diff"])
+            }
             var idsrecvd = [];
             // add and update entries
-            $.each(event["items"], function(i, e) {
+            $.each(timerBuffer["items"], function(i, e) {
                 var timer = {
                     type: typeLookup[e["eventType"]],
                     system: e["sourceSolarsystem"]["name"],
                     region: system2region[e["sourceSolarsystem"]["name"]],
                     time: e["startTime"],
                     realtime: moment.utc(e["startTime"]),
-		    calendartime: moment.utc(e["startTime"]).calendar(),
                     owner: "None",
                     id: e["sourceSolarsystem"]["name"]+e["startTime"],
                     defended: "N/A",
@@ -258,7 +344,7 @@
                 if ((timer["realtime"] > new Date())&& (timer["realtime"] < new Date(Date.now()+14400000))) {
                    timer.tags.push("start");
                 }
-                if ((timer.tags.indexOf("upcoming")) && (timer["defended"] === "50%")) {
+                if ((timer.tags.indexOf("upcoming")) && (timer["defended"] === "60%")) {
                    timer.tags.push("uncontested");
                 }
                 if (!(timer["id"] in timers)) {
@@ -271,6 +357,10 @@
                     $("#"+escapedId+" > .defended").html("<td class=\"defended\">"+timer["defended"]+"</td>");
                     $("#"+escapedId).data("tags", timer.tags.join(","));
                 };
+                // add searcht tags
+                addsearchtag(timer["owner"]);
+                addsearchtag(timer["defended"]);
+                addsearchtag(timer["system"]);
             });
             NProgress.inc();
             // remove old entries
@@ -292,12 +382,27 @@
         };
         websocket.onerror = function(evt) {  };
 
-        var storedFilter = "";
 
         function doFilter() {
+            var beemode = false;
+            // update link
+            $("#externallink a").attr("href", window.location.origin+"/"+encodeURI(storedFilter.join(",")));
+            if (storedFilter.length == 0) {
+                $("#externallink a").hide()
+                $("ul.tagit").css("width", "100%")
+            } else {
+                $("#externallink a").show()
+                $("ul.tagit").css("width", "96%")
+            }
             $("tbody tr").hide();
             // filtering
-            var terms = storedFilter.split(",").map(function (i) {return i.trim()});
+            var terms = storedFilter.map(function (i) {
+                if (i=="WorldWarBee") {
+                    beemode = true;
+                    return "pure blind|fade|deklein|branch|tribute|tenal|delve"
+                }
+                return i.trim().toLowerCase()
+            });
             var tohide = $("tbody tr").filter(function() {var target = $(this).text().toLowerCase() + $(this).data().tags; return terms.every(function(term) {return target.search(term) == -1})});
             var toshow = $("tbody tr").filter(function() {var target = $(this).text().toLowerCase() + $(this).data().tags; return terms.every(function(term) {return target.search(term) != -1})});
             toshow.show();
@@ -378,22 +483,34 @@
                 $("#start").val(start).trigger("change");
                 $("#uncontested").val(uncontested).trigger("change");
             }
+
+            // bee mode
+            if (beemode) {
+                var imptimers = imperium.map(function(x) {return $("tr:contains("+x+")")}).reduce(function(p, c, i, a) {return p.add(c)});
+                var freeports = $("tbody tr:contains(Freeport)")
+                var othertimers = $("tbody tr").not(imptimers).not(freeports);
+                imptimers.addClass("warning");
+                othertimers.addClass("success");
+            } else {
+                $("tbody tr").removeClass("warning success");
+            }
         }
 
-        // filtering
-        $('#filter').bind('input', function() {
-            var filter = $(this).val().toLowerCase();
-            storedFilter = filter;
-            doFilter();
-        });
-
         if (window.location.pathname.length>1) {
-                var initialFilter = window.location.pathname.slice(1);
-                $("#filter").val(initialFilter);
-                storedFilter = initialFilter.toLowerCase();
+			    console.log(window.location.pathname.slice(1));
+			    console.log(decodeURI(window.location.pathname.slice(1)));
+			    console.log(decodeURI(window.location.pathname.slice(1)).split(","));
+                storedFilter = decodeURI(window.location.pathname.slice(1)).split(",");
+				console.log(storedFilter);
+	         	storedFilter.map(function(t) {$("#filter").tagit("createTag", t)});
+				console.log(storedFilter);
                 doFilter();
         };
 
+        window.setInterval(function() {
+                doFilter();
+        }, 10000);
+	$(".tagit input").focus();
         sort("time");
     </script>
 
