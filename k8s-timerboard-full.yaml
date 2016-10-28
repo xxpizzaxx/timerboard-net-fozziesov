@@ -1,0 +1,125 @@
+#
+# Static website
+#
+apiVersion: v1
+kind: Service
+metadata:
+  name: timerboard-static
+spec:
+  ports:
+  - port: 80
+  selector:
+    name: timerboard-static
+  type: NodePort
+---
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: timerboard-static
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: timerboard-static
+    spec:
+      containers:
+      - name: timerboard-static-crest-sov-tq
+        image: andimiller/timerboard-net-fozziesov
+        ports:
+        - containerPort: 80
+          protocol: "TCP"
+---
+#
+# Websocket backend
+#
+apiVersion: v1
+kind: Service
+metadata:
+  name: waterslide-sov
+spec:
+  ports:
+  - port: 8080
+  selector:
+    name: waterslide-sov
+  type: NodePort
+---
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: waterslide-sov
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: waterslide-sov
+    spec:
+      containers:
+      - name: waterslide-crest-sov-tq
+        image: andimiller/waterslide
+        env:
+        - name: url
+          value: "https://crest-tq.eveonline.com/sovereignty/campaigns/"
+        - name: port
+          value: "8080"
+        - name: ttl
+          value: "30"
+        - name: host
+          value: "0.0.0.0"
+        ports:
+        - containerPort: 8080
+          protocol: "TCP"
+---
+#
+# Routing
+#
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: waterslide
+  namespace: default
+  annotations:
+    # kubernetes.io/tls-acme: "true"
+    kubernetes.io/ingress.class: "nginx"
+spec:
+  rules:
+  - host: timerboard.net
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: timerboard-static
+          servicePort: 80
+      - path: /stream
+        backend:
+          serviceName: waterslide-sov
+          servicePort: 8080
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: waterslide-tls
+  namespace: sock-shop
+  annotations:
+    kubernetes.io/tls-acme: "true"
+    kubernetes.io/ingress.class: "nginx"
+spec:
+  tls:
+  - hosts:
+    - timerboard.net
+    secretName: waterslide-tls
+  rules:
+  - host: timerboard.net
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: timerboard-static
+          servicePort: 80
+      - path: /stream
+        backend:
+          serviceName: waterslide-sov
+          servicePort: 8080
+
+
