@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: timerboard-static
+spec:
+  ports:
+  - port: 80 
+  selector:
+    name: timerboard-static
+  type: NodePort
+---
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: timerboard-static
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: timerboard-static
+    spec:
+      containers:
+      - name: timerboard-static-crest-sov-tq
+        image: andimiller/timerboard-net-fozziesov
+        ports:
+        - containerPort: 80
+          protocol: "TCP"
