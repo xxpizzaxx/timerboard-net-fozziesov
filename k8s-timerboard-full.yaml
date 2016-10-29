@@ -66,6 +66,10 @@ spec:
       - name: waterslide-crest-sov-tq
         image: andimiller/waterslide
         env:
+        - name: xms
+          value: "128m"
+        - name: xmx
+          value: "512m"
         - name: url
           value: "https://crest-tq.eveonline.com/sovereignty/campaigns/"
         - name: port
@@ -77,12 +81,6 @@ spec:
         ports:
         - containerPort: 8080
           protocol: "TCP"
-        livenessProbe:
-          httpGet:
-            path: /
-            port: 8080
-          initialDelaySeconds: 15
-          timeoutSeconds: 1
 ---
 #
 # Routing
@@ -113,7 +111,6 @@ apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   name: waterslide-tls
-  namespace: sock-shop
   annotations:
     kubernetes.io/tls-acme: "true"
     kubernetes.io/ingress.class: "nginx"
