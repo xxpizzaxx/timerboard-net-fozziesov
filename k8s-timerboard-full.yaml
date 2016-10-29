@@ -78,6 +78,9 @@ spec:
           value: "30"
         - name: host
           value: "0.0.0.0"
+        # uncomment this if you want to report to graphite, this reports to the `monitoring-graphite` service in the `monitoring` namespace
+        #- name: graphite
+        #  value: "--graphite monitoring-graphite.monitoring --graphite_prefix app.waterslide.$HOSTNAME"
         ports:
         - containerPort: 8080
           protocol: "TCP"
