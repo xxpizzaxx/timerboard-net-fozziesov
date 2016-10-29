@@ -288,8 +288,13 @@
 
         var timerBuffer = {};
 
+	function createWebSocket(path) {
+		var protocolPrefix = (window.location.protocol === 'https:') ? 'wss:' : 'ws:';
+		return protocolPrefix + '//' + location.host + path;
+	}
+
         // new stuff
-        websocket = new ReconnectingWebSocket("wss://api.pizza.moe/diffstream/sovereignty/campaigns/");
+        websocket = new ReconnectingWebSocket(createWebSocket("/stream/"));
         websocket.onopen = function(evt) {  };
         websocket.onclose = function(evt) {  };
         websocket.onmessage = function(evt) {
