@@ -35,52 +35,47 @@ spec:
             port: 80
           initialDelaySeconds: 15
           timeoutSeconds: 1
-
 ---
 #
-# Websocket backend
+# API backend
 #
 apiVersion: v1
 kind: Service
 metadata:
-  name: waterslide-sov
+  name: timerboard-api
 spec:
   ports:
   - port: 8080
   selector:
-    name: waterslide-sov
+    name: timerboard-api
   type: NodePort
 ---
 apiVersion: v1
 kind: ReplicationController
 metadata:
-  name: waterslide-sov
+  name: timerboard-api
 spec:
   replicas: 1
   template:
     metadata:
       labels:
-        name: waterslide-sov
+        name: timerboard-api
     spec:
       containers:
-      - name: waterslide-crest-sov-tq
-        image: andimiller/waterslide
+      - name: timerboard-net-backend
+        image: andimiller/timerboard-net-backend
         env:
         - name: xms
           value: "128m"
         - name: xmx
           value: "512m"
-        - name: url
-          value: "https://crest-tq.eveonline.com/sovereignty/campaigns/"
         - name: port
           value: "8080"
-        - name: ttl
-          value: "30"
         - name: host
           value: "0.0.0.0"
         # uncomment this if you want to report to graphite, this reports to the `monitoring-graphite` service in the `monitoring` namespace
         #- name: graphite
-        #  value: "--graphite monitoring-graphite.monitoring --graphite_prefix app.waterslide.$HOSTNAME"
+        #  value: "--graphite monitoring-graphite.monitoring --graphite_prefix app.timerboard-backend.$HOSTNAME"
         ports:
         - containerPort: 8080
           protocol: "TCP"
@@ -107,7 +102,7 @@ spec:
           servicePort: 80
       - path: /stream
         backend:
-          serviceName: waterslide-sov
+          serviceName: timerboard-api
           servicePort: 8080
 ---
 apiVersion: extensions/v1beta1
@@ -120,10 +115,10 @@ metadata:
 spec:
   tls:
   - hosts:
-    - timerboard.net
+    - beta.timerboard.net
     secretName: waterslide-tls
   rules:
-  - host: timerboard.net
+  - host: beta.timerboard.net
     http:
       paths:
       - path: /
@@ -132,5 +127,5 @@ spec:
           servicePort: 80
       - path: /stream
         backend:
-          serviceName: waterslide-sov
+          serviceName: timerboard-api
           servicePort: 8080
