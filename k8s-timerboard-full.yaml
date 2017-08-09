@@ -1,0 +1,131 @@
+#
+# Static website
+#
+apiVersion: v1
+kind: Service
+metadata:
+  name: timerboard-static
+spec:
+  ports:
+  - port: 80
+  selector:
+    name: timerboard-static
+  type: NodePort
+---
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: timerboard-static
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: timerboard-static
+    spec:
+      containers:
+      - name: timerboard-static-crest-sov-tq
+        image: andimiller/timerboard-net-fozziesov
+        ports:
+        - containerPort: 80
+          protocol: "TCP"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 15
+          timeoutSeconds: 1
+---
+#
+# API backend
+#
+apiVersion: v1
+kind: Service
+metadata:
+  name: timerboard-api
+spec:
+  ports:
+  - port: 8080
+  selector:
+    name: timerboard-api
+  type: NodePort
+---
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: timerboard-api
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: timerboard-api
+    spec:
+      containers:
+      - name: timerboard-net-backend
+        image: andimiller/timerboard-net-backend
+        env:
+        - name: xms
+          value: "128m"
+        - name: xmx
+          value: "512m"
+        - name: port
+          value: "8080"
+        - name: host
+          value: "0.0.0.0"
+        # uncomment this if you want to report to graphite, this reports to the `monitoring-graphite` service in the `monitoring` namespace
+        #- name: graphite
+        #  value: "--graphite monitoring-graphite.monitoring --graphite_prefix app.timerboard-backend.$HOSTNAME"
+        ports:
+        - containerPort: 8080
+          protocol: "TCP"
+---
+#
+# Routing
+#
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: waterslide
+  namespace: default
+  annotations:
+    # kubernetes.io/tls-acme: "true"
+    kubernetes.io/ingress.class: "nginx"
+spec:
+  rules:
+  - host: timerboard.net
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: timerboard-static
+          servicePort: 80
+      - path: /stream
+        backend:
+          serviceName: timerboard-api
+          servicePort: 8080
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: waterslide-tls
+  annotations:
+    kubernetes.io/tls-acme: "true"
+    kubernetes.io/ingress.class: "nginx"
+spec:
+  tls:
+  - hosts:
+    - beta.timerboard.net
+    secretName: waterslide-tls
+  rules:
+  - host: beta.timerboard.net
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: timerboard-static
+          servicePort: 80
+      - path: /stream
+        backend:
+          serviceName: timerboard-api
+          servicePort: 8080

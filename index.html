@@ -7,7 +7,7 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <link rel="icon" type="image/png" href="./favicon.png">
     <link rel="shortcut icon" type="image/png" href="./favicon.png">
-    <link rel="stylesheet" type="text/css" href="./css/bootstrap.min.css" />
+    <link rel="stylesheet" type="text/css" href="./css/bootstrap.min.css?light" />
     <script src="./js/jquery.min.js"></script>
     <script src="./js/bootstrap.min.js"></script>
     <link href="./css/font-awesome.min.css" rel="stylesheet">
@@ -155,9 +155,9 @@
 
 
     <script type="text/template" id="timer_template">
-        <tr id="{{ id }}" class="timer_row" data-tags="{{ tags }}">
+        <tr id="{{ id }}" class="timer_row" data-tags="{{ tags }}" data-system="{{ system }}">
             <td class="type">{{ type }}</td>
-            <td class="system"><a href="http://evemaps.dotlan.net/search?q={{ system }}">{{ system }}</a></td>
+	    <td class="system" data-system="{{ system }}"><a href="http://evemaps.dotlan.net/search?q={{ system }}">{{ system }}</a></td>
             <td class="region">{{ region }}</td>
             <td class="owner"><a href="http://evemaps.dotlan.net/search?q={{ owner }}">{{ owner }}</a></td>
             <td class="time">{{ time }}</td>
@@ -263,14 +263,6 @@
             }
         }
 
-        var typeLookup = {
-            1: "TCU",
-            2: "IHub",
-            3: "Station",
-            4: "Freeport"
-        };
-
-        $.each(Object.keys(typeLookup), function(i,k) {addsearchtag(typeLookup[k])});
         $.each(Object.keys(system2region), function(i,k) {addsearchtag(system2region[k])});
         addsearchtag("TheNorthernWar");
 
@@ -284,10 +276,15 @@
 
         NProgress.start(); //start the loading bar on first use
 
-        var timerBuffer = {};
+        var timerBuffer = [];
+
+	function createWebSocket(path) {
+		var protocolPrefix = (window.location.protocol === 'https:') ? 'wss:' : 'ws:';
+		return protocolPrefix + '//' + location.host + path;
+	}
 
         // new stuff
-        websocket = new ReconnectingWebSocket("wss://api.pizza.moe/diffstream/sovereignty/campaigns/");
+        websocket = new ReconnectingWebSocket(createWebSocket("/stream"));
         websocket.onopen = function(evt) {  };
         websocket.onclose = function(evt) {  };
         websocket.onmessage = function(evt) {
@@ -303,32 +300,31 @@
             }
             // load our data
             if ("initial" in event) {
-                console.log("initial mode");
                 timerBuffer = event["initial"];
             }
             if ("diff" in event) {
-                console.log("diff mode");
-                console.log(event["diff"]);
                 timerBuffer = jsonpatch.apply_patch(timerBuffer, event["diff"])
             }
             var idsrecvd = [];
             // add and update entries
-            $.each(timerBuffer["items"], function(i, e) {
+            $.each(timerBuffer, function(i, packet) {
+                var e = packet["event"]
+		var system = packet["solar_system_name"]
                 var timer = {
-                    type: typeLookup[e["eventType"]],
-                    system: e["sourceSolarsystem"]["name"],
-                    region: system2region[e["sourceSolarsystem"]["name"]],
-                    time: e["startTime"],
-                    realtime: moment.utc(e["startTime"]),
+                    type: e["event_type"].replace("_", " ").replace(" defense", ""),
+                    system: system,
+                    region: system2region[system],
+                    time: e["start_time"],
+                    realtime: moment.utc(e["start_time"]),
                     owner: "None",
-                    id: e["sourceSolarsystem"]["name"]+e["startTime"],
+                    id: e["campaign_id"].toString(),
                     defended: "N/A",
                     tags: []
                 };
                 idsrecvd.push(timer["id"]);
                 try {
-                    timer["owner"] = e["defender"]["defender"]["name"];
-                    timer["defended"] = pad(Math.round(e["defender"]["score"] * 100), 2) + "%";
+                    timer["owner"] = packet["alliance"]["name"];
+                    timer["defended"] = pad(Math.round(e["defender_score"] * 100), 2) + "%";
                 }
                 catch (err) {
 
@@ -350,21 +346,20 @@
                     add_timer(0, timer);
                 } else {
                     // update it's defense data and tags
-                    var escapedId = timer["id"].replace(/:/g, "\\:");
+                    var escapedId = timer["id"]
                     var selector = "#"+escapedId+" > .defended";
-                    $("#"+escapedId+" > .defended").html("<td class=\"defended\">"+timer["defended"]+"</td>");
+                    $("#"+escapedId+" > .defended").html("<td class=\"defended\">"+timer["defended"].toString()+"</td>");
                     $("#"+escapedId).data("tags", timer.tags.join(","));
                 };
                 // add searcht tags
                 addsearchtag(timer["owner"]);
-                addsearchtag(timer["defended"]);
+                addsearchtag(timer["defender_score"]);
                 addsearchtag(timer["system"]);
             });
             NProgress.inc();
             // remove old entries
             Object.keys(timers).forEach(function(i) {
                 if($.inArray(i, idsrecvd) == -1) {
-                    console.log("expiring timer "+i);
                     var escapedId = i.replace(/:/g, "\\:");
                     window.clearInterval(timers[i]);
                     $("#"+escapedId).remove();
@@ -495,13 +490,8 @@
         }
 
         if (window.location.pathname.length>1) {
-			    console.log(window.location.pathname.slice(1));
-			    console.log(decodeURI(window.location.pathname.slice(1)));
-			    console.log(decodeURI(window.location.pathname.slice(1)).split(","));
                 storedFilter = decodeURI(window.location.pathname.slice(1)).split(",");
-				console.log(storedFilter);
 	         	storedFilter.map(function(t) {$("#filter").tagit("createTag", t)});
-				console.log(storedFilter);
                 doFilter();
         };
 
