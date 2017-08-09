@@ -42,9 +42,7 @@
             </a></div>
         <nav class="collapse navbar-collapse navbar-ex1-collapse" role="navigtion">
             <ul class="nav navbar-nav">
-        		<!--
-                    <li><a href="/WorldWarBee">#WorldWarBee</a></li>
-                -->
+                    <li><a href="/TheNorthernWar">TheNorthernWar</a></li>
             </ul>
         </nav>
     </div>
@@ -191,7 +189,7 @@
 	});
 
         var searchtags = ["uncontested", "active", "upcoming", "start"];
-        var imperium = ["The Initiative.", "Goonswarm Federation", "The Bastion", "Get Off My Lawn", "RAZOR Alliance", "The Initiative.", "SpaceMonkey's Alliance", "Tactical Narcotics Team", "Executive Outcomes"];
+        var imperium = ["The Initiative.", "Goonswarm Federation", "The Bastion", "Tactical Narcotics Team", "Brothers in Arms Alliance"];
 
         function addsearchtag(t) {
             if (searchtags.indexOf(t) == -1) {
@@ -274,7 +272,7 @@
 
         $.each(Object.keys(typeLookup), function(i,k) {addsearchtag(typeLookup[k])});
         $.each(Object.keys(system2region), function(i,k) {addsearchtag(system2region[k])});
-        addsearchtag("WorldWarBee");
+        addsearchtag("TheNorthernWar");
 
 
 
@@ -384,7 +382,7 @@
 
 
         function doFilter() {
-            var beemode = false;
+            var warmode = false;
             // update link
             $("#externallink a").attr("href", window.location.origin+"/"+encodeURI(storedFilter.join(",")));
             if (storedFilter.length == 0) {
@@ -397,9 +395,9 @@
             $("tbody tr").hide();
             // filtering
             var terms = storedFilter.map(function (i) {
-                if (i=="WorldWarBee") {
-                    beemode = true;
-                    return "pure blind|fade|deklein|branch|tribute|tenal|delve"
+                if (i=="TheNorthernWar") {
+                    warmode = true;
+                    return "pure blind|fade|deklein|branch|tribute|tenal|vale"
                 }
                 return i.trim().toLowerCase()
             });
@@ -484,8 +482,8 @@
                 $("#uncontested").val(uncontested).trigger("change");
             }
 
-            // bee mode
-            if (beemode) {
+            // war mode
+            if (warmode) {
                 var imptimers = imperium.map(function(x) {return $("tr:contains("+x+")")}).reduce(function(p, c, i, a) {return p.add(c)});
                 var freeports = $("tbody tr:contains(Freeport)")
                 var othertimers = $("tbody tr").not(imptimers).not(freeports);
