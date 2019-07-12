@@ -176,7 +176,7 @@
     <script>
         // set up UI
         $("#externallink a").hide();
-        $(".dial").knob();
+        $(".dial").knob({"bgColor": "#282828"});
         $(".dial").click(function () {
                 if (storedFilter.indexOf(this.id) == -1) {
 			$("#filter").tagit("createTag", this.id);
