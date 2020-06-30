@@ -42,6 +42,7 @@
             </a></div>
         <nav class="collapse navbar-collapse navbar-ex1-collapse" role="navigtion">
             <ul class="nav navbar-nav">
+		    <li><a href = "/WorldWarBeeII">World War Bee II</a></li>
             </ul>
         </nav>
     </div>
@@ -188,7 +189,13 @@
 	});
 
         var searchtags = ["uncontested", "active", "upcoming", "start"];
-        var imperium = ["The Initiative.", "Goonswarm Federation", "The Bastion", "Tactical Narcotics Team", "Brothers in Arms Alliance"];
+        var imperium = [
+		"The Initiative.", "Goonswarm Federation", "The Bastion", "Tactical Narcotics Team", "Brothers in Arms Alliance",
+		"Space Violence.", "Get Off My Lawn", "Wildly Inappropriate.", "I too am gay", "Ranger Regiment",
+		"Infensus", "Initiative Associates", "Violente Fortuna", "Initiative Mercenaries",
+		"Greater Western Co-Prosperity Sphere", "Iron Armada", "French ConneXion.",
+		"United Earth Directorate.", "Pen Is Out", "The Hivemind Federation Alliance"
+	];
 
         function addsearchtag(t) {
             if (searchtags.indexOf(t) == -1) {
@@ -263,7 +270,7 @@
         }
 
         $.each(Object.keys(system2region), function(i,k) {addsearchtag(system2region[k])});
-        addsearchtag("TheNorthernWar");
+        addsearchtag("WorldWarBeeII");
 
 
 
@@ -389,9 +396,9 @@
             $("tbody tr").hide();
             // filtering
             var terms = storedFilter.map(function (i) {
-                if (i=="TheNorthernWar") {
+                if (i=="WorldWarBeeII") {
                     warmode = true;
-                    return "pure blind|fade|deklein|branch|tribute|tenal|vale"
+                    return "querious|period basis|delve|fountain|cloud ring|fade";
                 }
                 return i.trim().toLowerCase()
             });
